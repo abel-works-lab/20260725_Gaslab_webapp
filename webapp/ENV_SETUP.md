@@ -13,12 +13,12 @@ WORKOS_API_KEY=
 WORKOS_CLIENT_ID=
 # 32文字以上のランダム文字列（Cookie暗号化用）。生成: openssl rand -base64 32
 WORKOS_COOKIE_PASSWORD=
-# ログイン後リダイレクト先（ローカル）
-NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3000/callback
+# ログイン後リダイレクト先（ローカル。ポート番号はpackage.jsonのdevスクリプトに合わせる）
+WORKOS_REDIRECT_URI=http://localhost:3000/callback
 ```
 
 ## WorkOS 側の設定
-1. WorkOS ダッシュボード → Redirects に `http://localhost:3000/callback` を登録
+1. WorkOS ダッシュボード → Redirects に `WORKOS_REDIRECT_URI` と同じURLを登録
 2. AuthKit を有効化（Email+Password か Google 等）
 3. API Key / Client ID をコピーして上記に貼る
 
