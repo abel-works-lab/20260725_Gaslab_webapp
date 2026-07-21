@@ -1,11 +1,18 @@
 # 環境変数の設定（`.env.local` を手動作成）
 
+`npm run setup`（`webapp/` で実行）を使うと、下記の大半（npm install・.env.local雛形生成・
+Convexプロジェクト作成・データseed投入）を自動化できる。WorkOS/Convexのアカウント作成・
+APIキー取得だけは自分で行う必要がある（スクリプト実行中に案内される）。
+このドキュメントは手動でやる場合の手順、または `npm run setup` の途中で参照する手順。
+
 `webapp/.env.local` を新規作成し、以下を記入する（このファイルはコミットしない）。
 
 ```
 # ---- Convex ----
 # `npx convex dev` 実行時に自動で書き込まれる
 NEXT_PUBLIC_CONVEX_URL=
+# Convexダッシュボード → Settings → Deploy Keys で発行して貼る（seedスクリプト実行に必須）
+CONVEX_DEPLOY_KEY=
 
 # ---- WorkOS AuthKit ----
 # https://dashboard.workos.com で取得
@@ -24,7 +31,8 @@ WORKOS_REDIRECT_URI=http://localhost:3100/callback
 3. API Key / Client ID をコピーして上記に貼る
 
 ## Convex 側
-- `webapp/` で `npx convex dev` を実行 → プロジェクト作成 → `NEXT_PUBLIC_CONVEX_URL` が自動設定される
+- `webapp/` で `npx convex dev --once` を実行 → プロジェクト作成 → `NEXT_PUBLIC_CONVEX_URL` が自動設定される
+- Convexダッシュボード → Settings → Deploy Keys で `CONVEX_DEPLOY_KEY` を発行して貼る
 - その後 `node scripts/seed.mjs` `node scripts/seed_medical_cost.mjs` `node scripts/seed_muni_stats.mjs` `node scripts/seed_region.mjs` でデータ投入
 
 ## トラブルシューティング

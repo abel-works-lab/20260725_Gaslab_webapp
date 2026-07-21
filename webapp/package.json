@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "setup": "node scripts/setup.mjs"
   },
   "dependencies": {
     "@workos-inc/authkit-nextjs": "^0.14.0",
