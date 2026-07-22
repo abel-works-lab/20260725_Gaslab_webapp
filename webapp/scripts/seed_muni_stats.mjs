@@ -11,15 +11,23 @@ import { fileURLToPath } from 'url'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+// 前後の空白・引用符(' や ")を取り除く（貼り付け時に付きがちなため）
+function stripQuotes(value) {
+  return value.trim().replace(/^['"]|['"]$/g, '').trim()
+}
+
 // 環境変数 → .env.local の順で参照する
 function envVar(name) {
-  if (process.env[name]) return process.env[name].trim()
+  if (process.env[name]) return stripQuotes(process.env[name])
   const p = path.join(root, '.env.local')
   if (fs.existsSync(p)) {
     const txt = fs.readFileSync(p, 'utf-8')
     for (const line of txt.split(/\r?\n/)) {
       const m = line.match(new RegExp('^' + name + '=(.+)$'))
-      if (m) return m[1].trim()
+      if (m) {
+        const value = stripQuotes(m[1])
+        if (value) return value
+      }
     }
   }
   throw new Error(`${name} が環境変数にも .env.local にもありません`)

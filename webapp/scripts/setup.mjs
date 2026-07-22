@@ -1,9 +1,10 @@
 // 参加者向けの環境構築セットアップスクリプト。`npm run setup` から実行する。
 //
-// 自動化する範囲: npm install / .env.local雛形生成 / Convexプロジェクトの作成・コード反映
-//              / データseed投入
+// 自動化する範囲: npm install / .env.local雛形生成・不足分の補完 / Convexプロジェクトの
+//              作成・コード反映 / データseed投入
 // 自動化しない範囲（参加者本人の操作が必須）:
 //   - WorkOSアカウント作成・Application作成・API Key/Client IDの取得
+//   - fal.aiアカウント作成・API Key（FAL_KEY）の取得（AIインサイト/レポート/PPTX生成に必須）
 //   - Convexログイン（ブラウザでのOAuth承認）
 //   - ConvexダッシュボードでのDeploy Key発行
 import { spawnSync } from 'child_process'
@@ -23,16 +24,44 @@ function run(cmd, args) {
     stdio: 'inherit',
     shell: process.platform === 'win32',
   })
+  if (res.error) {
+    console.error(`\n✗ 実行できませんでした: ${cmd} ${args.join(' ')}`)
+    console.error(res.error.message)
+    process.exit(1)
+  }
   if (res.status !== 0) {
     console.error(`\n✗ 失敗しました: ${cmd} ${args.join(' ')}`)
+    console.error('証明書エラー（unable to verify the first certificate）が出た場合は、ENV_SETUP.mdのトラブルシューティングを参照してください。')
     process.exit(1)
   }
 }
 
-function isFilled(name) {
-  if (!fs.existsSync(envPath)) return false
+// 値の前後の空白・引用符(' や ")を取り除いた「実質の値」を返す。未設定ならnull。
+function readVar(name) {
+  if (!fs.existsSync(envPath)) return null
   const txt = fs.readFileSync(envPath, 'utf-8')
-  return new RegExp(`^${name}=(.+)$`, 'm').test(txt)
+  const m = txt.match(new RegExp(`^${name}=(.*)$`, 'm'))
+  if (!m) return null
+  const value = m[1].trim().replace(/^['"]|['"]$/g, '').trim()
+  return value.length > 0 ? value : null
+}
+
+function isFilled(name) {
+  return readVar(name) !== null
+}
+
+// 既存の.env.localに対して、nameが空欄/未設定なら valueGenerator() の値で埋める（重複行を作らない）
+function ensureFilled(name, valueGenerator) {
+  if (isFilled(name)) return
+  const value = valueGenerator()
+  let txt = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : ''
+  const lineRe = new RegExp(`^${name}=.*$`, 'm')
+  if (lineRe.test(txt)) {
+    txt = txt.replace(lineRe, `${name}=${value}`)
+  } else {
+    txt = (txt.length && !txt.endsWith('\n') ? txt + '\n' : txt) + `${name}=${value}\n`
+  }
+  fs.writeFileSync(envPath, txt, 'utf-8')
 }
 
 function ask(question) {
@@ -46,6 +75,7 @@ async function waitUntilAllFilled(names, guideText) {
     return
   }
   console.log(guideText)
+  console.log(`\n(貼り付け先ファイル: ${envPath})`)
   while (names.some((n) => !isFilled(n))) {
     await ask('\n貼り付けが完了したらEnterキーを押してください... ')
     const missing = names.filter((n) => !isFilled(n))
@@ -60,18 +90,17 @@ console.log('=== 35_e-stat_pre セットアップ ===\n')
 
 // 1. npm install
 if (!fs.existsSync(path.join(root, 'node_modules'))) {
-  console.log('[1/5] npm install を実行します...')
+  console.log('[1/6] npm install を実行します...')
   run('npm', ['install'])
 } else {
-  console.log('[1/5] node_modules は既に存在するためスキップします')
+  console.log('[1/6] node_modules は既に存在するためスキップします')
 }
 
-// 2. .env.local 雛形生成
+// 2. .env.local 雛形生成・不足分の補完
 if (!fs.existsSync(envPath)) {
-  console.log('[2/5] .env.local を新規作成します')
-  const cookiePassword = crypto.randomBytes(32).toString('base64')
+  console.log('[2/6] .env.local を新規作成します')
   const template = `# ---- Convex ----
-# NEXT_PUBLIC_CONVEX_URL は次のステップで npx convex dev --once が自動で書き込みます
+# NEXT_PUBLIC_CONVEX_URL は後のステップで npx convex dev --once が自動で書き込みます
 NEXT_PUBLIC_CONVEX_URL=
 # Convexダッシュボード → Settings → Deploy Keys で発行して貼り付けてください
 CONVEX_DEPLOY_KEY=
@@ -80,23 +109,30 @@ CONVEX_DEPLOY_KEY=
 # https://dashboard.workos.com で取得
 WORKOS_API_KEY=
 WORKOS_CLIENT_ID=
-# Cookie暗号化用（自動生成済み・変更不要）
-WORKOS_COOKIE_PASSWORD=${cookiePassword}
-# ログイン後リダイレクト先（このプロジェクトはポート3100固定）
-WORKOS_REDIRECT_URI=http://localhost:3100/callback
+# Cookie暗号化用（自動生成されます・変更不要）
+WORKOS_COOKIE_PASSWORD=
+# ログイン後リダイレクト先（このプロジェクトはポート3100固定・自動設定されます）
+WORKOS_REDIRECT_URI=
+
+# ---- fal.ai（AIインサイト・レポート・PPTX生成に必須）----
+# https://fal.ai でアカウント作成 → ダッシュボードでAPI Keyを発行して貼る
+FAL_KEY=
 `
   fs.writeFileSync(envPath, template, 'utf-8')
-  console.log('✓ .env.local を作成しました（WORKOS_COOKIE_PASSWORD / WORKOS_REDIRECT_URI は設定済み）')
 } else {
-  console.log('[2/5] .env.local は既に存在するためスキップします')
+  console.log('[2/6] .env.local は既に存在するためスキップします')
 }
+// 自動生成・固定値でよい項目は、既存ファイルの補完も含めてここで必ず埋める
+ensureFilled('WORKOS_COOKIE_PASSWORD', () => crypto.randomBytes(32).toString('base64'))
+ensureFilled('WORKOS_REDIRECT_URI', () => 'http://localhost:3100/callback')
+console.log('✓ WORKOS_COOKIE_PASSWORD / WORKOS_REDIRECT_URI を確認・設定しました')
 
 // 3. WorkOSキーの入力待ち
-console.log('\n[3/5] WorkOSの設定')
+console.log('\n[3/6] WorkOSの設定')
 await waitUntilAllFilled(
   ['WORKOS_API_KEY', 'WORKOS_CLIENT_ID'],
   [
-    '以下の手順でWorkOSのキーを取得し、.env.local に貼り付けてください:',
+    '以下の手順でWorkOSのキーを取得し、.env.local に貼り付けてください（引用符は付けずそのまま貼ってください）:',
     '  1. https://dashboard.workos.com でアカウント作成・ログイン',
     '  2. Applications で新規Applicationを作成',
     '  3. Redirects に http://localhost:3100/callback を登録',
@@ -105,18 +141,34 @@ await waitUntilAllFilled(
   ].join('\n'),
 )
 
-// 4. Convexプロジェクト作成・コード反映（ブラウザログインが必要）
-console.log('\n[4/5] Convexのセットアップを行います（ブラウザでログイン画面が開きます）')
+// 4. fal.aiキーの入力待ち
+console.log('\n[4/6] fal.aiの設定（AIインサイト・レポート・PPTX生成に必須）')
+await waitUntilAllFilled(
+  ['FAL_KEY'],
+  [
+    '以下の手順でfal.aiのキーを取得し、.env.local に貼り付けてください（引用符は付けずそのまま貼ってください）:',
+    '  1. https://fal.ai でアカウント作成・ログイン',
+    '  2. ダッシュボードでAPI Keyを発行',
+    '  3. .env.local の FAL_KEY= に貼る',
+  ].join('\n'),
+)
+
+// 5. Convexプロジェクト作成・コード反映（ブラウザログインが必要）
+console.log('\n[5/6] Convexのセットアップを行います（ブラウザでログイン画面が開きます）')
 run('npx', ['convex', 'dev', '--once'])
 console.log('✓ Convexプロジェクトの作成・コード反映が完了しました')
 
 await waitUntilAllFilled(
   ['CONVEX_DEPLOY_KEY'],
-  'Convexダッシュボード → Settings → Deploy Keys でキーを発行し、.env.local の CONVEX_DEPLOY_KEY= に貼り付けてください',
+  '開発（Dev）デプロイメント側のConvexダッシュボード → Settings → Deploy Keys でキーを発行し、.env.local の CONVEX_DEPLOY_KEY= に貼り付けてください（Productionのキーではありません）',
 )
 
-// 5. データseed投入
-console.log('\n[5/5] データを投入します')
+// 6. データseed投入
+if (!isFilled('NEXT_PUBLIC_CONVEX_URL')) {
+  console.error('\n✗ NEXT_PUBLIC_CONVEX_URL が未設定です。手順5の npx convex dev --once が正常終了したか確認し、再実行してください。')
+  process.exit(1)
+}
+console.log('\n[6/6] データを投入します')
 run('node', ['scripts/seed.mjs'])
 run('node', ['scripts/seed_medical_cost.mjs'])
 run('node', ['scripts/seed_muni_stats.mjs'])

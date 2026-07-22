@@ -18,9 +18,23 @@
 | [WorkOS AuthKit](https://workos.com/) | ログイン認証 |
 | [pptxgenjs](https://gitbrent.github.io/PptxGenJS/) | PPTXファイルの自動生成 |
 | [Leaflet](https://leafletjs.com/) / react-leaflet | 地図表示 |
-| Claude（Anthropic） | データを読んでインサイト・提案文を生成するAI |
+| [fal.ai](https://fal.ai/) 経由 Claude（Anthropic） | データを読んでインサイト・提案文を生成するAI |
 
 ## セットアップ
+
+### かんたんセットアップ（推奨）
+
+```bash
+cd webapp
+npm run setup
+```
+
+`npm install`・`.env.local`雛形の生成・Convexプロジェクトの作成・データ投入までを自動で進める。
+途中でWorkOS/fal.ai/Convexのキー取得を案内されるので、その都度アカウント作成・キー取得だけ行えばよい
+（詳しくは `webapp/ENV_SETUP.md` 参照）。完了したら手順4の `npm run dev` に進む。
+
+<details>
+<summary>手動でセットアップする場合</summary>
 
 ### 1. 依存パッケージのインストール
 
@@ -31,18 +45,20 @@ npm install
 
 ### 2. 環境変数の設定
 
-`webapp/ENV_SETUP.md` の手順に従って `.env.local` を作成する。Convex（データベース）とWorkOS（認証）、それぞれ専用のプロジェクト・アプリケーションを作成する必要がある。
+`webapp/ENV_SETUP.md` の手順に従って `.env.local` を作成する。Convex（データベース）・WorkOS（認証）・
+fal.ai（AIインサイト・レポート・PPTX生成）、それぞれ専用のプロジェクト・アプリケーション・APIキーが必要。
 
 ### 3. データベースへのデータ投入
 
 ```bash
-npx convex dev
-# 別ターミナルで
+npx convex dev --once
 node scripts/seed.mjs
 node scripts/seed_medical_cost.mjs
 node scripts/seed_muni_stats.mjs
 node scripts/seed_region.mjs
 ```
+
+</details>
 
 ### 4. 開発サーバー起動
 
