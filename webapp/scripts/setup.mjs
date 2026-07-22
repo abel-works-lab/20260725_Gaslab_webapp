@@ -18,6 +18,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const envPath = path.join(root, '.env.local')
 
+// package.jsonのdevスクリプトが使う --use-system-ca フラグに、お使いのNode.jsが対応しているか
+// 実際に試して確認する（対応バージョンはNode.jsのリリースにより異なり決め打ちできないため）。
+// 対応していないと npm run dev が「bad option」で分かりにくく失敗するので、ここで先に止める。
+const flagCheck = spawnSync(process.execPath, ['--use-system-ca', '-e', 'process.exit(0)'])
+if (flagCheck.status !== 0) {
+  console.error(`✗ お使いのNode.js（v${process.versions.node}）は --use-system-ca フラグに対応していません。`)
+  console.error('このプロジェクトの npm run dev はこのフラグを使用します。')
+  console.error('https://nodejs.org/ から最新のNode.js（LTS）に更新してから再実行してください。')
+  process.exit(1)
+}
+
 function run(cmd, args) {
   const res = spawnSync(cmd, args, {
     cwd: root,
@@ -37,13 +48,17 @@ function run(cmd, args) {
 }
 
 // 値の前後の空白・引用符(' や ")を取り除いた「実質の値」を返す。未設定ならnull。
+// 同名行が複数ある場合は最初の非空値を返す（seed*.mjsのenvVar()と同じ挙動に揃える）
 function readVar(name) {
   if (!fs.existsSync(envPath)) return null
   const txt = fs.readFileSync(envPath, 'utf-8')
-  const m = txt.match(new RegExp(`^${name}=(.*)$`, 'm'))
-  if (!m) return null
-  const value = m[1].trim().replace(/^['"]|['"]$/g, '').trim()
-  return value.length > 0 ? value : null
+  const re = new RegExp(`^${name}=(.*)$`, 'gm')
+  let m
+  while ((m = re.exec(txt)) !== null) {
+    const value = m[1].trim().replace(/^['"]|['"]$/g, '').trim()
+    if (value.length > 0) return value
+  }
+  return null
 }
 
 function isFilled(name) {

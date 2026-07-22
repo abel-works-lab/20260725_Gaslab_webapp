@@ -22,6 +22,11 @@
 
 ## セットアップ
 
+**事前条件: `npm run dev` は `--use-system-ca` フラグを使用する。** 古いNode.jsだと
+`bad option` エラーで起動に失敗することがある（`npm run setup` はこのフラグへの対応を
+自動チェックし、非対応なら案内する）。エラーが出た場合は https://nodejs.org/ から
+最新のNode.js（LTS）に更新すること。
+
 ### かんたんセットアップ（推奨）
 
 ```bash

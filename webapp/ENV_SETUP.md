@@ -1,5 +1,10 @@
 # 環境変数の設定（`.env.local` を手動作成）
 
+**事前条件: `npm run dev` は `--use-system-ca` フラグを使用する。** 古いNode.jsだと
+`bad option` エラーで起動に失敗することがある（`npm run setup` はこのフラグへの対応を
+自動チェックし、非対応なら案内する）。エラーが出た場合は https://nodejs.org/ から
+最新のNode.js（LTS）に更新すること。
+
 `npm run setup`（`webapp/` で実行）を使うと、下記の大半（npm install・.env.local雛形生成・
 Convexプロジェクト作成・データseed投入）を自動化できる。WorkOS/fal.ai/Convexのアカウント作成・
 APIキー取得だけは自分で行う必要がある（スクリプト実行中に案内される）。
